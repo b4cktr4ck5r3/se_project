@@ -48,7 +48,46 @@ class Process {
         // })
 
         this.link.forEach(e => {
-            this.drawLineWithArrows(ctx, this.x + this.width, this.y + this.height/2, e.x , e.y + e.height /2, 10, 10, false, true);
+        	let down = false;
+          let top = false;
+          let left = false;
+          let right = false;
+          let ref_delta = 60;
+        	if (this.x > e.x-ref_delta && this.x < e.x+ref_delta) {
+          	if (this.y <= e.y) top = true;
+            else down = true;
+          }
+          else if (this.x < e.x) {
+          	left = true;
+          }
+          else right = true;
+          let line = {x0: null, y0: null, x1: null, x2: null};
+          if (top) {
+          	line.y0 = this.y+this.height;
+            line.y1 = e.y;
+          }
+          else if (down) {
+          	line.y0 = this.y;
+            line.y1 = e.y+e.height;
+          }
+          else {
+          	line.y0 = this.y+this.height/2;
+            line.y1 = e.y+e.height/2;
+          }
+          
+          if (left) {
+          	line.x0 = this.x+this.width;
+            line.x1 = e.x;
+          }
+          else if (right) {
+          	line.x0 = this.x;
+            line.x1 = e.x+e.width;
+          }
+          else {
+          	line.x0 = this.x+this.width/2;
+            line.x1 = e.x+e.width/2;
+          }
+          this.drawLineWithArrows(ctx, line, 10, 10, false, true);
         })
     }
 
@@ -59,31 +98,32 @@ class Process {
     // arrowStart: true/false directing to draw arrowhead at the line's starting point
     // arrowEnd: true/false directing to draw arrowhead at the line's ending point
 
-    drawLineWithArrows(ctx, x0, y0, x1, y1, aWidth, aLength, arrowStart, arrowEnd) {
-        var dx = x1 - x0;
-        var dy = y1 - y0;
-        var angle = Math.atan2(dy, dx);
-        var length = Math.sqrt(dx * dx + dy * dy);
-        //
-        ctx.translate(x0, y0);
-        ctx.rotate(angle);
-        ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.lineTo(length, 0);
-        if (arrowStart) {
-            ctx.moveTo(aLength, -aWidth);
-            ctx.lineTo(0, 0);
-            ctx.lineTo(aLength, aWidth);
-        }
-        if (arrowEnd) {
-            ctx.moveTo(length - aLength, -aWidth);
-            ctx.lineTo(length, 0);
-            ctx.lineTo(length - aLength, aWidth);
-        }
-        //
-        ctx.stroke();
-        ctx.setTransform(1, 0, 0, 1, 0, 0);
+    drawLineWithArrows(ctx, line, aWidth, aLength, arrowStart, arrowEnd) {
+        const {x0, x1, y0, y1} = line;
+    var dx = x1 - x0;
+    var dy = y1 - y0;
+    var angle = Math.atan2(dy, dx);
+    var length = Math.sqrt(dx * dx + dy * dy);
+    //
+    ctx.translate(x0, y0);
+    ctx.rotate(angle);
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(length, 0);
+    if (arrowStart) {
+        ctx.moveTo(aLength, -aWidth);
+        ctx.lineTo(0, 0);
+        ctx.lineTo(aLength, aWidth);
     }
+    if (arrowEnd) {
+        ctx.moveTo(length - aLength, -aWidth);
+        ctx.lineTo(length, 0);
+        ctx.lineTo(length - aLength, aWidth);
+    }
+    //
+    ctx.stroke();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+}
 
     onmousedown(evt) {
         let mouse_x = evt.offsetX,
