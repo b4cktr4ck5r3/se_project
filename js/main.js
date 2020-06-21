@@ -1,140 +1,244 @@
-/**
- * Classe permettant de représenter un processus.
- */
-class Process{
-    /**
-     * Constructeur Process
-     * @param {float} x 
-     * @param {float} y 
-     * @param {float} width 
-     * @param {float} height 
-     * @param {String} text 
-     */
-    constructor(x, y, width, height, text){
-        this.type = "rect";
+let processId = 1;
+let processWidth = 50;
+let processHeight = 50;
+let selectedColor = 'rgb(138, 148, 226)';
+let baseColor = 'rgb(138, 43, 226)';
+let bgColor = 'rgb(248, 249, 250)';
+
+class Process {
+    constructor(x, y, width, height, text, selectionnerTache, deleteProcess) {
+        this.type = "rect"
         this.x = x;
         this.y = y;
         this.width = width;
         this.height = height;
         this.text = text;
+        this.drag = false;
+
+        this.selected = false;
+        this.select_control_down = false;
+        this.selectionnerTache = selectionnerTache;
+        this.deleteProcess = deleteProcess;
+
+        this.link = [];
     }
 
-    draw(ctx){
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = 'black';
+    onkeydown(evt) {
+        if (evt.key == "Control") this.select_control_down = true;
+    }
+
+    onkeyup(evt) {
+        if (evt.key == "Control") this.select_control_down = false;
+    }
+
+    draw(ctx) {
+        ctx.lineWidth = 3;
+        if (this.selected) ctx.strokeStyle = selectedColor;
+        else ctx.strokeStyle = baseColor;
         ctx.strokeRect(this.x, this.y, this.width, this.height);
-        ctx.fillStyle = 'black';
-        // ctx.fillText(this.text);
+        if (this.selected) ctx.fillStyle = selectedColor;
+        else ctx.fillStyle = baseColor;
+        ctx.fillText(this.text, this.x + this.width / 2, this.y + this.height / 2 + 2);
+
+        // this.link.forEach(e => {
+        //     ctx.beginPath();
+        //     ctx.moveTo(this.x + this.width / 2, this.y + this.height / 2);
+        //     ctx.lineTo(e.x + e.width / 2, e.y + e.height / 2);
+        //     ctx.stroke();
+        // })
+
+        this.link.forEach(e => {
+            this.drawLineWithArrows(ctx, this.x + this.width, this.y + this.height/2, e.x , e.y + e.height /2, 10, 10, false, true);
+        })
     }
 
-    onmousedown(evt){
+    // x0,y0: the line's starting point
+    // x1,y1: the line's ending point
+    // width: the distance the arrowhead perpendicularly extends away from the line
+    // height: the distance the arrowhead extends backward from the endpoint
+    // arrowStart: true/false directing to draw arrowhead at the line's starting point
+    // arrowEnd: true/false directing to draw arrowhead at the line's ending point
 
+    drawLineWithArrows(ctx, x0, y0, x1, y1, aWidth, aLength, arrowStart, arrowEnd) {
+        var dx = x1 - x0;
+        var dy = y1 - y0;
+        var angle = Math.atan2(dy, dx);
+        var length = Math.sqrt(dx * dx + dy * dy);
+        //
+        ctx.translate(x0, y0);
+        ctx.rotate(angle);
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(length, 0);
+        if (arrowStart) {
+            ctx.moveTo(aLength, -aWidth);
+            ctx.lineTo(0, 0);
+            ctx.lineTo(aLength, aWidth);
+        }
+        if (arrowEnd) {
+            ctx.moveTo(length - aLength, -aWidth);
+            ctx.lineTo(length, 0);
+            ctx.lineTo(length - aLength, aWidth);
+        }
+        //
+        ctx.stroke();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
     }
 
-    onmouseup(evt){
-
+    onmousedown(evt) {
+        let mouse_x = evt.offsetX,
+            mouse_y = evt.offsetY;
+        if (this.x <= mouse_x && mouse_x <= this.x + this.width && this.y <= mouse_y && mouse_y <= this.y + this.height) {
+            if (this.select_control_down) {
+                this.selectionnerTache(this);
+            } else this.drag = true;
+        }
     }
 
-    onmousemove(evt){
+    onmousemove(evt) {
+        let mouse_x = evt.offsetX,
+            mouse_y = evt.offsetY;
+        if (this.drag) {
+            this.x = mouse_x;
+            this.y = mouse_y;
+        }
+    }
 
+    onmouseup(evt) {
+        this.drag = false;
     }
 }
 
-/**
- * Classe permettant de représenter un dessin.
- */
-class Canvas{
-    /**
-     * Constructeur Canvas
-     */
-    constructor(){
-        let canvas = document.getElementById('drawZone');
+class Canvas {
+    constructor() {
+        this.width = window.innerWidth;
+        this.height = window.innerHeight;
+        let canvas = document.getElementById('test');
+        canvas.width = this.width;
+        canvas.height = this.height;
+        canvas.style.width = this.width + "px";
+        canvas.style.height = this.height + "px";
         this.ctx = canvas.getContext('2d');
-        this.processes = [new Process(20, 20, 50, 50, "T1")];
+        this.ctx.font = 'bold 24px sans-serif';
+        this.ctx.textAlign = "center";
+        this.ctx.textBaseline = "middle";
+
+        this.elements = [];
         this.draw();
+
+        this.select_1 = null;
+        this.select_control_down = false;
 
         canvas.onmousedown = evt => this.onmousedown(evt);
-        canvas.onmouseup = evt => this.onmouseup(evt);
         canvas.onmousemove = evt => this.onmousemove(evt);
+        canvas.onmouseup = evt => this.onmouseup(evt);
+        canvas.ondblclick = evt => this.ondblclick(evt);
+        document.onkeydown = evt => this.onkeydown(evt);
+        document.onkeyup = evt => this.onkeyup(evt);
     }
 
-    draw(){
-        this.drawCanvas();
-        this.processes.forEach(p => p.draw(this.ctx));
+    onkeydown(evt) {
+        if (evt.key == "Control") {
+            this.select_control_down = true;
+        }
+        this.elements.forEach(e => e.onkeydown(evt, this.ctx));
     }
 
-    drawCanvas(){
-        this.ctx.fillStyle = 'black';
-        this.ctx.fillRect(0, 0, 30, 30);
+    onkeyup(evt) {
+        if (this.select_1 && evt.key == "Delete") this.deleteProcess();
+        else if (evt.key == "Control") {
+            this.select_control_down = false;
+        }
+        this.elements.forEach(e => e.onkeyup(evt, this.ctx));
     }
 
-    onmousedown(evt){
-        this.processes.forEach(p => p.onmousedown(evt, this.ctx));
+    isInNext(element, test_element) {
+        if (element.link.length == 0) return false;
+        else if (element.link.includes(test_element)) return true;
+        else {
+            return !element.link.every(e => !this.isInNext(e, test_element));
+        }
+    }
+
+    onPrevElementRecursive(element, callback) {
+        let prev_elements = this.elements.filter(e => e.link.includes(element));
+        prev_elements.forEach(e => {
+            callback(e);
+            this.onPrevElementRecursive(e, callback)
+        });
+    }
+
+    deleteProcess() {
+        let prev_elements = this.elements.filter(e => e.link.includes(this.select_1));
+        prev_elements.forEach(e => e.link = e.link.filter(p => p != this.select_1));
+        this.elements = this.elements.filter(p => p != this.select_1);
+        this.select_1 = null;
         this.draw();
     }
 
-    onmouseup(evt){
-        this.processes.forEach(p => p.onmouseup(evt, this.ctx));
+    createLink(t1, t2) {
+        if (!this.isInNext(t1, t2)) {
+            t1.link.push(t2);
+            t1.link = t1.link.filter(e => !this.isInNext(t2, e));
+            this.onPrevElementRecursive(t2, (e) => {
+                if (this.isInNext(e, t1)) {
+                    e.link = e.link.filter(ele => !this.isInNext(t2, ele) && ele != t2);
+                }
+            })
+        }
+    }
+
+    selectProcess(tache) {
+        if (!this.select_1) {
+            tache.selected = true;
+            this.select_1 = tache;
+        } else if (this.select_1 != tache) {
+            console.log("Create Link");
+            if (this.select_1.link.find(e => e == tache)) this.select_1.link = this.select_1.link.filter(e => e != tache);
+            else if (tache.link.find(e => e == this.select_1)) {
+                tache.link = tache.link.filter(e => e != this.select_1);
+            } else {
+                let boucle = tache.link.length > 0 && !tache.link.every(e => !this.isInNext(e, this.select_1));
+                if (!boucle) this.createLink(this.select_1, tache);
+            }
+            this.select_1.selected = false;
+            this.select_1 = null
+        } else {
+            this.select_1.selected = false;
+            this.select_1 = null
+        }
+    }
+
+    draw() {
+        this.drawBackground();
+        this.elements.forEach(e => e.draw(this.ctx));
+    }
+
+    drawBackground() {
+        this.ctx.fillStyle = bgColor;
+        this.ctx.fillRect(0, 0, this.width, this.height);
+    }
+
+    onmousedown(evt) {
+        this.elements.forEach(e => e.onmousedown(evt, this.ctx));
+        this.draw();
+    }
+    onmouseup(evt) {
+        this.elements.forEach(e => e.onmouseup(evt, this.ctx));
+        this.draw();
+    }
+    onmousemove(evt) {
+        this.elements.forEach(e => e.onmousemove(evt, this.ctx));
         this.draw();
     }
 
-    onmousemove(evt){
-        this.processes.forEach(p => p.onmousemove(evt, this.ctx));
+    ondblclick(evt) {
+        this.elements.push(new Process(evt.offsetX, evt.offsetY, 50, 50, `T${processId}`, this.selectProcess.bind(this)));
+        processId++;
         this.draw();
     }
 }
 
-/**
- * Classe permettant de représenter un lien entre deux processus.
- */
-class Link{
-    constructor(){
-
-    }
-}
-
-/**
- * Fonction principale de l'application.
- */
-function initApp(){
-    detectCurrentElement();
-    let test = new Canvas();
-}
-
-/**
- * Permet de détecter l'élément HTML que pointe le curseur de la souris.
- */
-function detectCurrentElement(){
-    var currentElement = null;
-    document.addEventListener('mouseover', function(e){
-        currentElement = e.target;
-        console.log(currentElement.id);
-        return currentElement.id;
-    })
-}
-
-function createProcess(){
-    let e = window.event;
-    let x = e.clientX;
-    let y = e.clientY;
-    let currProcess = new Process(x, y, 300, 150, "mySquare");
-}
-
-
-function drawRectangle(){
-    var canvas = document.createElement('canvas');
-    canvas.id = "mySquare";
-    canvas.width = 300;
-    canvas.height = 150;
-    canvas.style.zIndex = 8;
-    canvas.style.position = "absolute";
-    canvas.style.border = "1px solid";
-    
-    var element = document.getElementById('drawZone');
-    element.appendChild(canvas)
-    
-    var ctx = canvas.getContext("2d");
-    ctx.beginPath();
-    ctx.rect(20, 20, 150, 150);
-    ctx.stroke();
+function init() {
+    new Canvas();
 }
